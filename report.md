@@ -1,47 +1,51 @@
-# Задание 1
+# Задание 2
 
-Для проверки монитора безопасности, необходимо изменить режим(mode = {"direction_1": "green", "direction_2": "green"}) на недопустимый (2 зеленых)
-
+1. Добавляем новый режим "мигающий желтый"
 ```python
-...
+from multiprocessing import Queue, Process
+from multiprocessing.queues import Empty
+import json
 
-class ControlSystem(Process):
+# формат управляющих команд для монитора
+@dataclass
+class ControlEvent:
+    operation: str
 
-    def __init__(self, monitor_queue: Queue):
-        # вызываем конструктор базового класса
-        super().__init__()
-        # мы знаем только очередь монитора безопасности для взаимодействия с другими сущностями
-        # прямая отправка сообщений в другую сущность запрещена в концепции FLASK
-        self.monitor_queue = monitor_queue
-        # создаём собственную очередь, в которую монитор сможет положить сообщения для этой сущности
-        self._own_queue = Queue()
+# список разрешенных сочетаний сигналов светофора
+# любые сочетания, отсутствующие в этом списке, запрещены
+traffic_lights_allowed_configurations = [
+    {"direction_1": "red", "direction_2": "green"},
+    {"direction_1": "red", "direction_2": "red"},    
+    {"direction_1": "red", "direction_2": "yellow"},    
+    {"direction_1": "yellow", "direction_2": "yellow"},    
+    {"direction_1": "off", "direction_2": "off"},
+    {"direction_1": "green", "direction_2": "red"},    
+    {"direction_1": "green", "direction_2": "yellow"},
+    {"direction_1": "yellow_blinking", "direction_2": "yellow_blinking"},
+]
 
-    # выдаёт собственную очередь для взаимодействия
-    def entity_queue(self):
-        return self._own_queue
+```
 
-    # основной код сущности
-    def run(self):
+2. Изменяем конфигурацию
+```python
+def run(self):        
         print(f'[{self.__class__.__name__}] старт')
         print(f'[{self.__class__.__name__}] отправляем тестовый запрос')
 
-        mode = {"direction_1": "green", "direction_2": "green"}
-
-        # запрос для сущности WorkerB - "скажи hello"
-
-<SKIP>
-    
+        mode = {"direction_1": "yellow_blinking", "direction_2": "yellow_blinking"}
 ```
 
-
-### Результат работы
+## Результаты работы
 ```bash
 [монитор] старт
 [ControlSystem] старт
 [ControlSystem] отправляем тестовый запрос
 [LightsGPIO] старт[ControlSystem] завершение работы
 
-[монитор] обрабатываем событие Event(source='ControlSystem', destination='LightsGPIO', operation='set_mode', parameters='{"direction_1": "green", "direction_2": "green"}')
-[монитор] проверяем конфигурацию {'direction_1': 'green', 'direction_2': 'green'}
-[монитор] событие не разрешено политиками безопасности
+[монитор] обрабатываем событие Event(source='ControlSystem', destination='LightsGPIO', operation='set_mode', parameters='{"direction_1": "yellow_blinking", "direction_2": "yellow_blinking"}')
+[монитор] проверяем конфигурацию {'direction_1': 'yellow_blinking', 'direction_2': 'yellow_blinking'}
+[монитор] отправляем запрос Event(source='ControlSystem', destination='LightsGPIO', operation='set_mode', parameters='{"direction_1": "yellow_blinking", "direction_2": "yellow_blinking"}')
+[LightsGPIO] ControlSystem запрашивает изменение режима {"direction_1": "yellow_blinking", "direction_2": "yellow_blinking"}
+[LightsGPIO] новый режим: {"direction_1": "yellow_blinking", "direction_2": "yellow_blinking"}!
+[LightsGPIO] завершение работы
 ```
